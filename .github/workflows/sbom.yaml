@@ -1,33 +1,41 @@
-name: Generate SBOM
-
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: true
+
+permissions: {}
 
 jobs:
-  generate-sbom:
+  test_bom_action:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    name: Install bom and generate SBOM
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set tag name
+        shell: bash
+        run: |
+          TAG=${{ github.event.inputs.tag }}
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
         with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install CycloneDX BOM generator
-        run: npm install -g @cyclonedx/bom
-
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+      - name: Install bom
+        uses: kubernetes-sigs/release-actions/setup-bom@a30d93cf2aa029e1e4c8a6c79f766aebf429fddb # v0.3.1
       - name: Generate SBOM
-        run: cyclonedx-bom -o sbom.json
-
+        shell: bash
+        run: |
+          bom generate --format=json -o /tmp/kueue-$TAG.spdx.json .
+         
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release upload $TAG /tmp/kueue-$TAG.spdx.json
