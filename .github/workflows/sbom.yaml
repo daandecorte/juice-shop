@@ -7,27 +7,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  sbom:
+  generate-sbom:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install project dependencies
+      - name: Install dependencies
         run: npm install
 
-      - name: Install CycloneDX SBOM tool
-        run: npm install --save-dev @cyclonedx/npm
+      - name: Generate SBOM with CycloneDX CLI via Docker
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            cyclonedx/cyclonedx-node \
+            -o /app/sbom.json
 
-      - name: Generate SBOM
-        run: npx @cyclonedx/npm --output-format json --output-file sbom.json
-
-      - name: Upload SBOM as artifact
+      - name: Upload SBOM artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbom
