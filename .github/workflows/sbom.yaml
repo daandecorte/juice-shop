@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install CycloneDX CLI
         run: |
@@ -26,7 +26,7 @@ jobs:
         run: cyclonedx -o sbom.json
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
