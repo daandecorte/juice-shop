@@ -1,38 +1,41 @@
-name: Generate SBOM
+name: Generate SBOM with Kubernetes BOM
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  release:
+    types:
+      - released
+
+permissions:
+  contents: read
 
 jobs:
-  generate-sbom:
+  sbom:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    env:
+      OUTPUT: sbom.spdx
+      TAG: ${{ github.event.release.tag_name }}
+
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Fetch source code into GITHUB_WORKSPACE
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install CycloneDX CLI
-        run: |
-          npm install -g @cyclonedx/bom
-          echo "$(npm bin -g)" >> $GITHUB_PATH
-
-      - name: Verify CLI installed
-        run: which cyclonedx-bom
+      - name: Install Kubernetes BOM
+        uses: kubernetes-sigs/release-actions/setup-bom@a30d93cf2aa029e1e4c8a6c79f766aebf429fddb # v0.3.1
 
       - name: Generate SBOM
-        run: cyclonedx-bom -o sbom.json
+        run: |
+          bom generate \
+            --dirs=. \
+            --image=registry.k8s.io/kube-state-metrics/kube-state-metrics:$TAG \
+            --namespace=https://github.com/kubernetes/kube-state-metrics/releases/download/$TAG/$OUTPUT \
+            --output=$OUTPUT
 
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom.json
+      - name: Upload SBOM to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload $TAG $OUTPUT
