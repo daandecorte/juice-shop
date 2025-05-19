@@ -11,19 +11,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install CycloneDX CLI
-        run: |
-          curl -sL https://github.com/CycloneDX/cyclonedx-node-module/releases/latest/download/cyclonedx-npm-linux-x64 -o cyclonedx
-          chmod +x cyclonedx
-          sudo mv cyclonedx /usr/local/bin/
+        uses: actions/checkout@v3
 
       - name: Install dependencies
         run: npm install
 
-      - name: Generate SBOM
-        run: cyclonedx -o sbom.json
+      - name: Generate CycloneDX SBOM
+        run: npx @cyclonedx/bom -o sbom.json
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v4
